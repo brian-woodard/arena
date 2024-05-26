@@ -20,6 +20,7 @@ struct Arena;
 Arena* ArenaAlloc(u64 capacity);
 void ArenaRelease(Arena* arena);
 void ArenaSetAutoAlign(Arena* arena, u64 alignment);
+void ArenaAllowChaining(Arena* arena, bool chain);
 
 u64 ArenaPos(Arena* arena);
 void ArenaPrint(Arena* arena);

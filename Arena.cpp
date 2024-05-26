@@ -16,20 +16,26 @@
 
 struct Arena
 {
-   void* Buffer;
-   u64   Size;
-   u64   Position;
-   u64   Alignment;
+   void*  Buffer;
+   Arena* Next;
+   u64    Size;
+   u64    Position;
+   u64    Alignment;
+   bool   AllowChaining;
 };
 
 Arena* ArenaAlloc(u64 capacity)
 {
-   Arena* arena = (Arena*) malloc(sizeof(Arena));
+   const int arena_size = sizeof(Arena);
 
-   arena->Buffer    = malloc(capacity);
-   arena->Size      = capacity;
-   arena->Position  = 0;
-   arena->Alignment = 0;
+   Arena* arena = (Arena*) malloc(arena_size);
+
+   arena->Buffer        = malloc(capacity);
+   arena->Next          = nullptr;
+   arena->Size          = capacity;
+   arena->Position      = 0;
+   arena->Alignment     = 0;
+   arena->AllowChaining = false;
 
    return arena;
 }
@@ -47,6 +53,12 @@ void ArenaSetAutoAlign(Arena* arena, u64 alignment)
    arena->Alignment = alignment;
 }
 
+void ArenaAllowChaining(Arena* arena, bool chain)
+{
+   assert(arena);
+   arena->AllowChaining = chain;
+}
+
 u64 ArenaPos(Arena* arena)
 {
    assert(arena);
@@ -56,11 +68,13 @@ u64 ArenaPos(Arena* arena)
 void ArenaPrint(Arena* arena)
 {
    assert(arena);
-   printf("Arena            %p\n", (void*)arena);
-   printf("Arena->Buffer    %p\n", arena->Buffer);
-   printf("Arena->Size      %lu\n", arena->Size);
-   printf("Arena->Position  %lu\n", arena->Position);
-   printf("Arena->Alignment %lu\n", arena->Alignment);
+   printf("Arena                %p\n", (void*)arena);
+   printf("Arena->Buffer        %p\n", arena->Buffer);
+   printf("Arena->Next          %p\n", (void*)arena->Next);
+   printf("Arena->Size          %lu\n", arena->Size);
+   printf("Arena->Position      %lu\n", arena->Position);
+   printf("Arena->Alignment     %lu\n", arena->Alignment);
+   printf("Arena->AllowChaining %d\n", arena->AllowChaining);
 }
 
 void* ArenaPushNoZero(Arena* arena, u64 size)
@@ -75,7 +89,7 @@ void* ArenaPushAligner(Arena* arena, u64 size, u64 alignment)
 
 void* ArenaPush(Arena* arena, u64 size, u64 alignment, bool zero)
 {
-   assert(arena && arena->Buffer);
+   assert(arena && arena->Buffer && size <= arena->Size);
 
    unsigned char* buffer = (unsigned char*)arena->Buffer;
    u64            tmp_alignment = 0;
@@ -98,7 +112,48 @@ void* ArenaPush(Arena* arena, u64 size, u64 alignment, bool zero)
    void* result = &buffer[arena->Position];
    arena->Position += size;
 
-   assert(arena->Position < arena->Size);
+   if (arena->AllowChaining)
+   {
+      u64 buffers = arena->Position / arena->Size;
+      u64 local_position = arena->Position % arena->Size;
+      printf(">>> buffers needed %d\n", buffers);
+
+      u64 curr_buffers = 1;
+      Arena* tmp_arena = arena;
+      while (tmp_arena)
+      {
+         if (tmp_arena->Next)
+         {
+            curr_buffers++;
+            tmp_arena = tmp_arena->Next;
+         }
+         else
+         {
+            break;
+         }
+      }
+
+      printf(">>> buffers we have %d\n", curr_buffers);
+
+      // get index into buffer (allocate if we need to)
+      Arena* curr_arena = arena;
+      for (int i = 1; i < buffers; i++)
+      {
+         if (!curr_arena->Next)
+         {
+            curr_arena->Next = ArenaAlloc(curr_arena->Size);
+         }
+
+         curr_arena = curr_arena->Next;
+      }
+
+      buffer = (unsigned char*)curr_arena->Buffer;
+      result = &buffer[local_position];
+   }
+   else
+   {
+      assert(arena->Position <= arena->Size);
+   }
 
    if (zero)
    {
@@ -113,13 +168,13 @@ void* ArenaPush(Arena* arena, u64 size, u64 alignment, bool zero)
 
 void ArenaPopTo(Arena* arena, u64 position)
 {
-   assert(arena && arena->Buffer && position < arena->Size);
+   assert(arena && arena->Buffer && position < arena->Position);
    arena->Position = position;
 }
 
 void ArenaPop(Arena* arena, u64 size)
 {
-   assert(arena && arena->Buffer && (arena->Position - size) < arena->Size);
+   assert(arena && arena->Buffer && (arena->Position > size));
    arena->Position -= size;
 }
 

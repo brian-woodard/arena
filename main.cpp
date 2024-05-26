@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "Arena.h"
+#include "PrintData.h"
 
 struct TestStruct
 {
@@ -12,23 +13,41 @@ struct TestStruct
 int main()
 {
    printf("Arena test\n");
-   Arena* my_arena = ArenaAlloc(4096);
+   Arena* my_arena = ArenaAlloc(64);
+   ArenaAllowChaining(my_arena, true);
 
-   TestStruct* test = (TestStruct*)ArenaPush(my_arena, sizeof(TestStruct));
+   unsigned char* buffer = (unsigned char*)ArenaPush(my_arena, 64);
 
-   test->x = 1;
-   test->y = 2;
-   test->z = 3;
-   test->w = 4;
-   printf("test %p (%d, %d, %d, %d)\n", (void*)test, test->x, test->y, test->z, test->w);
-
-   test = (TestStruct*)ArenaPush(my_arena, sizeof(TestStruct));
+   for (int i = 0; i < 64; i++)
+   {
+      buffer[i] = i + 0;
+   }
 
    ArenaPrint(my_arena);
-   printf("test %p (%d, %d, %d, %d)\n", (void*)test, test->x, test->y, test->z, test->w);
+   printf("buffer %p\n", (void*)buffer);
+   printf("%s\n", CPrintData::GetDataAsString((char*)buffer, 64));
 
-   while (ArenaPos(my_arena) < 8192)
+   buffer = (unsigned char*)ArenaPush(my_arena, 64);
+  
+   for (int i = 0; i < 64; i++)
    {
-      test = (TestStruct*)ArenaPush(my_arena, sizeof(TestStruct));
+      buffer[i] = i + 64;
    }
+
+   ArenaPrint(my_arena);
+   printf("buffer %p\n", (void*)buffer);
+   printf("%s\n", CPrintData::GetDataAsString((char*)buffer, 64));
+
+   buffer = (unsigned char*)ArenaPush(my_arena, 64);
+  
+   for (int i = 0; i < 64; i++)
+   {
+      buffer[i] = i + 128;
+   }
+
+   ArenaPrint(my_arena);
+   printf("buffer %p\n", (void*)buffer);
+   printf("%s\n", CPrintData::GetDataAsString((char*)buffer, 64));
+
+   ArenaRelease(my_arena);
 }
