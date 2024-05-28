@@ -1,3 +1,4 @@
+#CXXFLAGS = -Wall -Wextra -pedantic-errors -fsanitize=address,undefined,bounds-strict -g -std=c++17
 CXXFLAGS = -Wall -Wextra -pedantic-errors -g -std=c++17
 
 all:

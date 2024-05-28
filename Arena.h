@@ -23,7 +23,7 @@ void ArenaSetAutoAlign(Arena* arena, u64 alignment);
 void ArenaAllowChaining(Arena* arena, bool chain);
 
 u64 ArenaPos(Arena* arena);
-void ArenaPrint(Arena* arena);
+void ArenaPrint(Arena* arena, bool first_time = true);
 
 void* ArenaPushNoZero(Arena* arena, u64 size);
 void* ArenaPushAligner(Arena* arena, u64 size, u64 alignment);

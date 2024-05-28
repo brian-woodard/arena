@@ -58,7 +58,7 @@ const char* CPrintData::GetDataAsString(char* Data, int Length, const char* NewL
                strcat(mDataString, newline);
                memset(element, 0, sizeof(element));
             }
-            sprintf(element, "%08x:", Address + i);
+            sprintf(element, "%08lx:", Address + i);
             strcat(mDataString, element);
             memset(element, 0, sizeof(element));
          }

@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include "Arena.h"
+#include "PrintData.h"
 
 // Exercises:
 // 2. Chaining upgrade - chain blocks together (malloc) (add setting?)
@@ -43,6 +44,10 @@ Arena* ArenaAlloc(u64 capacity)
 void ArenaRelease(Arena* arena)
 {
    assert(arena && arena->Buffer);
+
+   if (arena->Next)
+      ArenaRelease(arena->Next);
+
    free(arena->Buffer);
    free(arena);
 }
@@ -61,13 +66,27 @@ void ArenaAllowChaining(Arena* arena, bool chain)
 
 u64 ArenaPos(Arena* arena)
 {
+   u64 result = 0;
+
    assert(arena);
-   return arena->Position;
+
+   if (arena->Next && arena->Next->Position)
+   {
+      result = arena->Size + ArenaPos(arena->Next);
+   }
+   else
+      result = arena->Position;
+
+   return result;
 }
 
-void ArenaPrint(Arena* arena)
+void ArenaPrint(Arena* arena, bool first_time)
 {
    assert(arena);
+
+   if (first_time)
+      printf("\n---------------------------------------------------------------------------------\n");
+
    printf("Arena                %p\n", (void*)arena);
    printf("Arena->Buffer        %p\n", arena->Buffer);
    printf("Arena->Next          %p\n", (void*)arena->Next);
@@ -75,6 +94,14 @@ void ArenaPrint(Arena* arena)
    printf("Arena->Position      %lu\n", arena->Position);
    printf("Arena->Alignment     %lu\n", arena->Alignment);
    printf("Arena->AllowChaining %d\n", arena->AllowChaining);
+
+   printf("%s\n", CPrintData::GetDataAsString((char*)arena->Buffer, arena->Size));
+
+   if (arena->Next)
+   {
+      printf("Arena chain ---------------------------->\n");
+      ArenaPrint(arena->Next, false);
+   }
 }
 
 void* ArenaPushNoZero(Arena* arena, u64 size)
@@ -112,43 +139,22 @@ void* ArenaPush(Arena* arena, u64 size, u64 alignment, bool zero)
    void* result = &buffer[arena->Position];
    arena->Position += size;
 
-   if (arena->AllowChaining)
+   if (arena->AllowChaining && arena->Position > arena->Size)
    {
-      u64 buffers = arena->Position / arena->Size;
-      u64 local_position = arena->Position % arena->Size;
-      printf(">>> buffers needed %d\n", buffers);
+      arena->Position -= size;
 
-      u64 curr_buffers = 1;
-      Arena* tmp_arena = arena;
-      while (tmp_arena)
+      // go down the chain and find a linked arena that can hold this
+      // allocate a new one if needed
+      if (!arena->Next)
       {
-         if (tmp_arena->Next)
-         {
-            curr_buffers++;
-            tmp_arena = tmp_arena->Next;
-         }
-         else
-         {
-            break;
-         }
+         arena->Next = ArenaAlloc(arena->Size);
+
+         arena->Next->Alignment     = arena->Alignment;
+         arena->Next->AllowChaining = arena->AllowChaining;
       }
 
-      printf(">>> buffers we have %d\n", curr_buffers);
-
-      // get index into buffer (allocate if we need to)
-      Arena* curr_arena = arena;
-      for (int i = 1; i < buffers; i++)
-      {
-         if (!curr_arena->Next)
-         {
-            curr_arena->Next = ArenaAlloc(curr_arena->Size);
-         }
-
-         curr_arena = curr_arena->Next;
-      }
-
-      buffer = (unsigned char*)curr_arena->Buffer;
-      result = &buffer[local_position];
+      // try recursively pushing on the next arean
+      return ArenaPush(arena->Next, size, alignment, zero);
    }
    else
    {
@@ -168,18 +174,63 @@ void* ArenaPush(Arena* arena, u64 size, u64 alignment, bool zero)
 
 void ArenaPopTo(Arena* arena, u64 position)
 {
-   assert(arena && arena->Buffer && position < arena->Position);
-   arena->Position = position;
+   assert(arena && arena->Buffer);
+
+   if (arena->AllowChaining)
+   {
+      u64 total_position = ArenaPos(arena);
+
+      if (position < total_position)
+      {
+         if (position <= arena->Size)
+         {
+            Arena* next = arena->Next;
+
+            arena->Position = position;
+            arena->Next     = nullptr;
+
+            if (next)
+               ArenaRelease(next); 
+         }
+         else if (arena->Next)
+         {
+            position -= arena->Size;
+            ArenaPopTo(arena->Next, position);
+         }
+      }
+   }
+   else if (position < arena->Position)
+   {
+      arena->Position = position;
+   }
 }
 
 void ArenaPop(Arena* arena, u64 size)
 {
-   assert(arena && arena->Buffer && (arena->Position > size));
-   arena->Position -= size;
+   assert(arena && arena->Buffer);
+
+   if (arena->AllowChaining)
+   {
+      u64 total_position = ArenaPos(arena);
+
+      if (total_position > size)
+      {
+         u64 position = total_position - size;
+         ArenaPopTo(arena, position);
+      }
+   }
+   else if (arena->Position > size)
+   {
+      arena->Position -= size;
+   }
 }
 
 void ArenaClear(Arena* arena)
 {
    assert(arena && arena->Buffer);
+
+   if (arena->Next)
+      ArenaClear(arena->Next);
+
    arena->Position = 0;
 }
