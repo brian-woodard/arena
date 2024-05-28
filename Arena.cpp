@@ -6,7 +6,6 @@
 #include "PrintData.h"
 
 // Exercises:
-// 2. Chaining upgrade - chain blocks together (malloc) (add setting?)
 // 3. Use the MMU - allocate huge block of virtual address space (mmap)
 //    commit 4K pages as needed
 // 4. Humiliate std::vector - growable array with pointers that never
