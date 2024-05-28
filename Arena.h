@@ -4,7 +4,6 @@
 #include <stdint.h>
 
 // Exercises:
-// 2. Chaining upgrade - chain blocks together (malloc) (add setting?)
 // 3. Use the MMU - allocate huge block of virtual address space (mmap)
 //    commit 4K pages as needed
 // 4. Humiliate std::vector - growable array with pointers that never
@@ -20,9 +19,10 @@ struct Arena;
 Arena* ArenaAlloc(u64 capacity);
 void ArenaRelease(Arena* arena);
 void ArenaSetAutoAlign(Arena* arena, u64 alignment);
+void ArenaAllowChaining(Arena* arena, bool chain);
 
 u64 ArenaPos(Arena* arena);
-void ArenaPrint(Arena* arena);
+void ArenaPrint(Arena* arena, bool first_time = true);
 
 void* ArenaPushNoZero(Arena* arena, u64 size);
 void* ArenaPushAligner(Arena* arena, u64 size, u64 alignment);
