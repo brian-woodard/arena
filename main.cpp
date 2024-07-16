@@ -1,95 +1,25 @@
 #include <stdio.h>
+#include <unistd.h>
 #include "Arena.h"
-
-struct TestStruct
-{
-   int x;
-   int y;
-   int z;
-   int w;
-};
 
 int main()
 {
    printf("Arena test\n");
-   Arena* my_arena = ArenaAlloc(64);
-   ArenaAllowChaining(my_arena, true);
+   // TODO: Should be able to go even larger, >64GB... but 16GB the mmap fails
+   Arena* my_arena = ArenaAlloc(GB(64));
 
-   unsigned char* buffer = (unsigned char*)ArenaPush(my_arena, 48);
-   for (int i = 0; i < 48; i++)
+   ArenaPrint(my_arena);
+
+   while (1)
    {
-      buffer[i] = i + 0;
+      u64* data = (u64*)ArenaPush(my_arena, KB(100));
+      printf("write some memory at %p\n", (void*)data);
+      for (u64 i = 0; i < KB(100); i++)
+      {
+         data[i] = i;
+      }
+      usleep(1000000);
    }
-   ArenaPrint(my_arena);
-   printf(">>> arena pos %lu\n", ArenaPos(my_arena));
-
-   buffer = (unsigned char*)ArenaPush(my_arena, 48);
-   for (int i = 0; i < 48; i++)
-   {
-      buffer[i] = i + 64;
-   }
-   ArenaPrint(my_arena);
-   printf(">>> arena pos %lu\n", ArenaPos(my_arena));
-
-   buffer = (unsigned char*)ArenaPush(my_arena, 48);
-   for (int i = 0; i < 48; i++)
-   {
-      buffer[i] = i + 128;
-   }
-   ArenaPrint(my_arena);
-   printf(">>> arena pos %lu\n", ArenaPos(my_arena));
-
-   buffer = (unsigned char*)ArenaPush(my_arena, 8);
-   for (int i = 0; i < 8; i++)
-   {
-      buffer[i] = i + 0;
-   }
-   ArenaPrint(my_arena);
-   printf(">>> arena pos %lu\n", ArenaPos(my_arena));
-
-   buffer = (unsigned char*)ArenaPush(my_arena, 12);
-   for (int i = 0; i < 12; i++)
-   {
-      buffer[i] = i + 0;
-   }
-   ArenaPrint(my_arena);
-   printf(">>> arena pos %lu\n", ArenaPos(my_arena));
-
-   buffer = (unsigned char*)ArenaPush(my_arena, 24);
-   for (int i = 0; i < 24; i++)
-   {
-      buffer[i] = i + 0;
-   }
-   ArenaPrint(my_arena);
-   printf(">>> arena pos %lu\n", ArenaPos(my_arena));
-
-   ArenaPop(my_arena, 56);
-   ArenaPrint(my_arena);
-   printf(">>> arena pos %lu\n", ArenaPos(my_arena));
-
-   ArenaPop(my_arena, 32);
-   ArenaPrint(my_arena);
-   printf(">>> arena pos %lu\n", ArenaPos(my_arena));
-
-   ArenaPop(my_arena, 56);
-   ArenaPrint(my_arena);
-   printf(">>> arena pos %lu\n", ArenaPos(my_arena));
-
-   buffer = (unsigned char*)ArenaPush(my_arena, 8);
-   for (int i = 0; i < 8; i++)
-   {
-      buffer[i] = i + 0;
-   }
-   ArenaPrint(my_arena);
-   printf(">>> arena pos %lu\n", ArenaPos(my_arena));
-
-   buffer = (unsigned char*)ArenaPush(my_arena, 8);
-   for (int i = 0; i < 8; i++)
-   {
-      buffer[i] = i + 0;
-   }
-   ArenaPrint(my_arena);
-   printf(">>> arena pos %lu\n", ArenaPos(my_arena));
 
    ArenaRelease(my_arena);
 }

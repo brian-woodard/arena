@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <stdio.h>
+#include <sys/mman.h>
+#include <string.h>
+#include <errno.h>
 #include "Arena.h"
 #include "PrintData.h"
 
@@ -19,20 +22,31 @@ struct Arena
    void*  Buffer;
    Arena* Next;
    u64    Size;
+   u64    CommitSize;
+   u64    Committed;
    u64    Position;
    u64    Alignment;
    bool   AllowChaining;
 };
 
-Arena* ArenaAlloc(u64 capacity)
+Arena* ArenaAlloc(u64 capacity, u64 commit)
 {
-   const int arena_size = sizeof(Arena);
+   assert(sizeof(Arena) < commit && commit < capacity);
 
-   Arena* arena = (Arena*) malloc(arena_size);
+   const u64 arena_size = sizeof(Arena);
 
-   arena->Buffer        = malloc(capacity);
+   // TODO: Allow a commit size to be passed in and use mprotect to commit that ammount
+   Arena* arena = (Arena*) mmap(0, capacity, PROT_NONE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+
+   assert(arena != MAP_FAILED);
+
+   mprotect(arena, commit, PROT_READ | PROT_WRITE);
+
+   arena->Buffer        = (void*)((u64)arena + arena_size);
    arena->Next          = nullptr;
-   arena->Size          = capacity;
+   arena->Size          = capacity - arena_size;
+   arena->CommitSize    = commit;
+   arena->Committed     = commit;
    arena->Position      = 0;
    arena->Alignment     = 0;
    arena->AllowChaining = false;
@@ -47,8 +61,7 @@ void ArenaRelease(Arena* arena)
    if (arena->Next)
       ArenaRelease(arena->Next);
 
-   free(arena->Buffer);
-   free(arena);
+   munmap(arena, arena->Size + sizeof(Arena));
 }
 
 void ArenaSetAutoAlign(Arena* arena, u64 alignment)
@@ -79,7 +92,7 @@ u64 ArenaPos(Arena* arena)
    return result;
 }
 
-void ArenaPrint(Arena* arena, bool first_time)
+void ArenaPrint(Arena* arena, bool first_time, bool print_data)
 {
    assert(arena);
 
@@ -94,12 +107,13 @@ void ArenaPrint(Arena* arena, bool first_time)
    printf("Arena->Alignment     %lu\n", arena->Alignment);
    printf("Arena->AllowChaining %d\n", arena->AllowChaining);
 
-   printf("%s\n", CPrintData::GetDataAsString((char*)arena->Buffer, arena->Size));
+   if (print_data)
+      printf("%s\n", CPrintData::GetDataAsString((char*)arena->Buffer, arena->Size));
 
    if (arena->Next)
    {
       printf("Arena chain ---------------------------->\n");
-      ArenaPrint(arena->Next, false);
+      ArenaPrint(arena->Next, false, print_data);
    }
 }
 
@@ -119,6 +133,17 @@ void* ArenaPush(Arena* arena, u64 size, u64 alignment, bool zero)
 
    unsigned char* buffer = (unsigned char*)arena->Buffer;
    u64            tmp_alignment = 0;
+
+   while (arena->Position + size + sizeof(Arena) > arena->Committed)
+   {
+      printf(">>> committed %lu size %lu\n", arena->Committed, size);
+      int status = mprotect(arena + arena->Committed, arena->CommitSize, PROT_READ | PROT_WRITE);
+
+      if (status == -1)
+         printf("Error: %s\n", strerror(errno));
+      arena->Committed += arena->CommitSize;
+   }
+   printf(">>> committed %lu\n", arena->Committed);
 
    if (alignment)
       tmp_alignment = alignment;
