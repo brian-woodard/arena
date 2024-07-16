@@ -14,15 +14,20 @@
 
 typedef uint64_t u64;
 
+#define KB(n)  (((u64)(n)) << 10)
+#define MB(n)  (((u64)(n)) << 20)
+#define GB(n)  (((u64)(n)) << 30)
+#define TB(n)  (((u64)(n)) << 40)
+
 struct Arena;
 
-Arena* ArenaAlloc(u64 capacity);
+Arena* ArenaAlloc(u64 capacity, u64 commit = KB(64));
 void ArenaRelease(Arena* arena);
 void ArenaSetAutoAlign(Arena* arena, u64 alignment);
 void ArenaAllowChaining(Arena* arena, bool chain);
 
 u64 ArenaPos(Arena* arena);
-void ArenaPrint(Arena* arena, bool first_time = true);
+void ArenaPrint(Arena* arena, bool first_time = true, bool print_data = false);
 
 void* ArenaPushNoZero(Arena* arena, u64 size);
 void* ArenaPushAligner(Arena* arena, u64 size, u64 alignment);
