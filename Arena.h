@@ -1,17 +1,22 @@
 
-# pragma once
+#pragma once
 
 #include <stdint.h>
 
 // Exercises:
-// 3. Use the MMU - allocate huge block of virtual address space (mmap)
-//    commit 4K pages as needed
 // 4. Humiliate std::vector - growable array with pointers that never
 //    invalidate (try using arena as allocator for std::vector?)
 // 5. Add free list - for 1 known size at first
 // 6. Visualization and debugging
 // 7. Convert real code - perf before and after
 
+typedef int8_t   i8;
+typedef int16_t  i16;
+typedef int32_t  i32;
+typedef int64_t  i64;
+typedef uint8_t  u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
 typedef uint64_t u64;
 
 #define KB(n)  (((u64)(n)) << 10)
