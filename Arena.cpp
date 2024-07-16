@@ -9,8 +9,6 @@
 #include "PrintData.h"
 
 // Exercises:
-// 3. Use the MMU - allocate huge block of virtual address space (mmap)
-//    commit 4K pages as needed
 // 4. Humiliate std::vector - growable array with pointers that never
 //    invalidate (try using arena as allocator for std::vector?)
 // 5. Add free list - for 1 known size at first
@@ -136,14 +134,12 @@ void* ArenaPush(Arena* arena, u64 size, u64 alignment, bool zero)
 
    while (arena->Position + size + sizeof(Arena) > arena->Committed)
    {
-      printf(">>> committed %lu size %lu\n", arena->Committed, size);
-      int status = mprotect(arena + arena->Committed, arena->CommitSize, PROT_READ | PROT_WRITE);
+      int status = mprotect((u8*)arena + arena->Committed, arena->CommitSize, PROT_READ | PROT_WRITE);
 
-      if (status == -1)
-         printf("Error: %s\n", strerror(errno));
+      assert(status == 0);
+
       arena->Committed += arena->CommitSize;
    }
-   printf(">>> committed %lu\n", arena->Committed);
 
    if (alignment)
       tmp_alignment = alignment;
