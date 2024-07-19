@@ -2,9 +2,7 @@
 CXXFLAGS = -Wall -Wextra -pedantic-errors -g -std=c++17
 
 all:
-	g++ $(CXXFLAGS) -c Arena.cpp
-	g++ $(CXXFLAGS) -c PrintData.cpp
-	g++ $(CXXFLAGS) main.cpp -o main Arena.o PrintData.o
+	g++ $(CXXFLAGS) main.cpp -o main
 
 clean:
 	rm -f main
