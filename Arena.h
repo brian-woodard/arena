@@ -6,6 +6,7 @@
 // Exercises:
 // 4. Try using arena as allocator for std::vector
 // 5. Add free list - for 1 known size at first
+// 5a. Strings (C-style or data + length)
 // 6. Visualization and debugging
 // 7. Convert real code - perf before and after
 
