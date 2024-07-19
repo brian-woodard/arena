@@ -9,9 +9,9 @@
 #include "PrintData.h"
 
 // Exercises:
-// 4. Humiliate std::vector - growable array with pointers that never
-//    invalidate (try using arena as allocator for std::vector?)
+// 4. Try using arena as allocator for std::vector
 // 5. Add free list - for 1 known size at first
+// 5a. Strings (C-style or data + length)
 // 6. Visualization and debugging
 // 7. Convert real code - perf before and after
 
@@ -33,7 +33,6 @@ Arena* ArenaAlloc(u64 capacity, u64 commit)
 
    const u64 arena_size = sizeof(Arena);
 
-   // TODO: Allow a commit size to be passed in and use mprotect to commit that ammount
    Arena* arena = (Arena*) mmap(0, capacity, PROT_NONE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
 
    assert(arena != MAP_FAILED);
